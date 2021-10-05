@@ -15,14 +15,14 @@ library(thematic)
 
 shinyServer(function(input, output) {
     
-    
+    # Create reactive function to grab the dataset to display or plot
     datasetInput <- reactive({
-        # Clean up the data to ensure the data types makes sense
+        # Clean up the data to ensure the data types make sense
         data <- mpg
         data$manufacturer <- as.factor(data$manufacturer)
         data$model <- as.factor(data$model)
         data$displ <- as.numeric(data$displ)
-        data$year <- as.integer(data$year)
+        data$year <- as.factor(data$year)
         data$cyl <- as.factor(data$cyl)
         data$trans <- as.factor(data$trans)
         data$drv <- as.factor(data$drv)
@@ -56,16 +56,24 @@ shinyServer(function(input, output) {
         data
     })
     
+    # Grab the updated selection for the y-axis
     predictorInput <- reactive({
         input$predictor
     })
     
+    # Grab the updated selection for the x-axis
     mpgInput <- reactive({
         input$mpgType
     })
      
+    # Plot out the data table using the DT table
     output$table <- DT::renderDataTable(
         DT::datatable({datasetInput()},
+                      # Change the list of options for number of rows to display. 
+                      # Set the default to the smallest to allow the table to fit on the
+                      # page without scrolling.
+                      # use 'dom' to display everything but the search box
+                      # Set the selection mode to allow only single selections
                       options = list(lengthMenu = list(c(5, 10, 25, 50, -1), 
                                                        c('5', '10', '25', '50', 'All')),
                                      pageLength = 5,
@@ -74,32 +82,43 @@ shinyServer(function(input, output) {
                       )
         )  
 
-    
+    # Call thematic before rendering the plot to pass the page theme into the
+    # ggplot. If you don't it will plot using the default ggplot theme
     thematic::thematic_shiny()
-        output$carsPlot <- renderPlot({
-            # Call functions to get the most current table
-            # data and the radio button selections
-            dataset <- datasetInput()
-            predictorName <- predictorInput()
-            mpgName <- mpgInput()
-            data <- data.frame(x=dataset[,predictorName],
-                                 y=dataset[,mpgName])
-            names(data) <- c("x","y")
+    output$carsPlot <- renderPlot({
+        # Call functions to get the most current table
+        # data and the radio button selections
+        dataset <- datasetInput()
+        predictorName <- predictorInput()
+        mpgName <- mpgInput()
+        # massage the data to get into the form ggplot needs
+        data <- data.frame(x=dataset[,predictorName],
+                             y=dataset[,mpgName])
+        names(data) <- c("x","y")
+        # Use qplot to allow it to pick the appropriate graph
+        if(is.factor(data$x)) {
+            plot <- qplot(data=data,x=x, y=y, geom = "boxplot",
+                          xlab=predictorName,
+                          ylab=mpgName)
+        } else {
             plot <- qplot(data=data,x=x, y=y,
                           xlab=predictorName,
                           ylab=mpgName)
-            plot <- plot + theme(axis.text.x = element_text(angle=90, size=rel(1.2)),
-                                 axis.text.y = element_text(size=rel(1.2)),
-                                 axis.title = element_text(size=rel(1.1), face="bold"))
-            # If a row is selected, plot a large point there
-            if (!is.null(input$table_rows_selected)) {
-                plot <- plot + geom_point(aes(x=x[input$table_rows_selected],
-                                          y=y[input$table_rows_selected],
-                                          size=4), show.legend = FALSE
-                                          )
-            }
-            plot
+            
         }
-        )
+        # Change some of the text formatting to make them easier to read
+        plot <- plot + theme(axis.text.x = element_text(angle=90, size=rel(1.2)),
+                             axis.text.y = element_text(size=rel(1.2)),
+                             axis.title = element_text(size=rel(1.1), face="bold"))
+        # If a row in the data table is selected, plot a large point there
+        if (!is.null(input$table_rows_selected)) {
+            plot <- plot + geom_point(aes(x=x[input$table_rows_selected],
+                                      y=y[input$table_rows_selected],
+                                      size=4), show.legend = FALSE
+                                      )
+        }
+        plot
+    }
+    )
 
 })

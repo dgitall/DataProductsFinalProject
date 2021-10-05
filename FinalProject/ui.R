@@ -13,8 +13,8 @@ library(DT)
 library(ggplot2)
 
 
-# Define UI for application that draws a histogram
 shinyUI(fluidPage( 
+    # Set the page theme using a default theme and changing the color
     theme = bs_theme(bootswatch = "flatly",
                      bg = "#faf9eb", 
                      fg = "#523c1d"
@@ -22,10 +22,12 @@ shinyUI(fluidPage(
     
     # Application title
     titlePanel("Exploring Auto Fuel Efficiency"),
+    # Create the left sidebar
     sidebarLayout( 
         sidebarPanel( 
             h2("Filters"),
-            # Create a new Row in the UI for selectInputs            
+            # Add in dropdown selectors to filter on individual
+            # manufacturer, transmission type, and number of cylinders
             fluidRow(column(8, 
                             selectInput("man", 
                                         "Manufacturer:", 
@@ -49,15 +51,30 @@ shinyUI(fluidPage(
                                    "Cylinders:",
                                    c("All",
                                      unique(as.character(mpg$cyl))))
-                )) 
+                )),
+            p("The 'mpg' data set in the ggplot2 R package contains fuel economy 
+              data for 38 popular models of cars from 1999 to 2008."),
+            p("Filters: Select a subset of the data set using the
+              dropdown controls."),
+            p("Plot: Graph the highway or city fuel efficiency against a user selected
+              parameter."),
+            p("Data: Display the filtered data set. A selected row is highlight in the plot."),
+            p("Controls: Select the x and y axis parameters to display in the plot."),
+            a(href="https://ggplot2.tidyverse.org/reference/mpg.html", "(For more information about the 'mpg' data set)")
         ),
         
+        # Create the layout for the main panel
         mainPanel(
+            # Setup a plot at the top
             plotOutput("carsPlot"),
+            # with two tabs underneath
             tabsetPanel(
+                # The first tab displays the filtered data in a table
                 tabPanel("Data",
                          DT::dataTableOutput("table")),
-                tabPanel("Options",
+                # The second tab allows the user to select the x- and y-axis
+                # parameters
+                tabPanel("Controls",
                          fluidRow(
                              radioButtons("predictor",
                                           label = h4("Select X-axis parameter "),
